@@ -1,0 +1,13 @@
+credentials:
+  usernames:
+    julia:
+      email: juliainnet@yandex.ru
+      name: julia
+      password: hashed_password
+
+cookie:
+  expiry_days: 30
+  key: random_key
+  name: authme
+
+preauthorized:
