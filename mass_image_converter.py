@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Any, Optional
 from io import BytesIO
 import uuid
 import os
@@ -11,19 +10,12 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 import streamlit_authenticator as stauth
 import helpers
 
-# 3500x3500
-# поворот
-# поля
-# кадрировать
-# 3x4 и квадрат
-# убрать фон
-# конвертироват в jpeg/png
-
 
 @dataclass()
 class SessionImage():
     name: str
     image: Image.Image
+
 
 def get_session_uuid():
     if 'uuid' not in st.session_state:
@@ -58,7 +50,7 @@ def prepare_download_file(img_out_format: str):
             extention = 'jpg'
             format = 'jpeg2000'
             img.image = img.image.convert('RGBA')
-            
+
         img.image.save(f'{tmp_dir}/{fname}.{extention}', format)
 
     make_archive(tmp_dir, 'zip', tmp_dir)
@@ -73,13 +65,16 @@ def resize_images(new_size_str: str):
         if width < img.image.width and height < img.image.height:
             st.session_state.images[i].image = img.image.resize((width, height))
 
+
 def square_crop_images():
     for i, img in enumerate(st.session_state.images):
         st.session_state.images[i].image = helpers.square_crop(img.image)
 
+
 def square_extend_images():
     for i, img in enumerate(st.session_state.images):
         st.session_state.images[i].image = helpers.square_extend(img.image)
+
 
 def remove_background():
     for i, img in enumerate(st.session_state.images):
@@ -108,7 +103,7 @@ st.set_page_config(layout="wide")
 with open('./config.yaml') as file:
     config = yaml.load(file, Loader=yaml.loader.SafeLoader)
 
-authenticator =  stauth.Authenticate(
+authenticator = stauth.Authenticate(  # type: ignore
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
@@ -117,7 +112,7 @@ authenticator =  stauth.Authenticate(
 )
 
 
-name, authentication_status, username = authenticator.login('Login', 'main') # type: ignore
+name, authentication_status, username = authenticator.login('Login', 'main')  # type: ignore
 
 _sizes = [f'{i}x{i}' for i in range(1000, 3501, 500)]
 _download_file = None
@@ -133,13 +128,13 @@ elif authentication_status == True:
             new_size = st.selectbox('Максимальный размер', _sizes, index=len(_sizes)-1)
             do_square = st.radio('Оквадратить', ['Не изменять', 'Обрезать до квадрата', 'Расширить до квадрата'])
             do_remove_bg = st.checkbox('Удалить фон')
-            out_format = st.selectbox('Выходной формат', ['JPEG2000','JPEG', 'PNG'])
+            out_format = st.selectbox('Выходной формат', ['JPEG', 'JPEG2000', 'PNG'])
             submited = st.form_submit_button('Обработать изображения')
 
             if submited:
                 if 'images' in st.session_state:
                     if do_resise:
-                        resize_images(new_size) # type: ignore
+                        resize_images(new_size)  # type: ignore
                     if do_square == 'Обрезать до квадрата':
                         square_crop_images()
                     elif do_square == 'Расширить до квадрата':
@@ -147,7 +142,7 @@ elif authentication_status == True:
                     if do_remove_bg:
                         remove_background()
 
-                    _download_file = prepare_download_file(out_format) # type: ignore
+                    _download_file = prepare_download_file(out_format)  # type: ignore
                     st.success('Обработка завершена')
 
         if _download_file:
@@ -156,10 +151,9 @@ elif authentication_status == True:
                 data=open(_download_file, 'rb'),
                 file_name='archive.zip',
                 mime='application/zip'
-                )
+            )
 
-
-    uploaded_files = st.file_uploader("Choose a file", accept_multiple_files=True, type=['png', 'jpg', 'tiff'])
+    uploaded_files = st.file_uploader("Choose a file", accept_multiple_files=True, type=['png', 'jpg', 'jpeg', 'tiff'])
 
     if uploaded_files and not _download_file:
         st.session_state.images = process_uploaded_images(uploaded_files)
