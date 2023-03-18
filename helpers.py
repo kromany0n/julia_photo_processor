@@ -49,9 +49,16 @@ def square_extend(img: Image.Image):
 
 def remove_bg(img: Image.Image) -> Image.Image:
     session = rembg.new_session("u2net")
-    result = Image.new("RGBA", img.size, 'white')
+    result = Image.new("RGB", img.size, 'white')
     cleared = rembg.remove(img, session = session) # type: ignore
     result.paste(cleared, mask=cleared)
     return result
     
 
+def resize_image(image: Image.Image, new_size_str: str):
+        new_size = new_size_str.split('x')
+        width = int(new_size[0])
+        height = int(new_size[1])
+        if width < image.width and height < image.height:
+            return image.resize((width, height))
+        return image
