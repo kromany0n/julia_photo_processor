@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from io import BytesIO
 import uuid
 import os
 import gc
@@ -48,10 +47,6 @@ def process_uploaded_images(uploaded_files: list[UploadedFile]):
     for uf in uploaded_files:
         with open(f'temp/{session_uuid()}/{uf.name}', 'wb') as f:
             f.write(uf.getbuffer())
-            thumb_image = Image.open(BytesIO(uf.getvalue()))
-            thumb_image.thumbnail((300, 300))
-            thumb = SessionImage(uf.name, thumb_image)
-            st.session_state.images.append(thumb)  # type: ignore
 
 
 def prepare_download_file(img_out_format: str):
@@ -95,28 +90,30 @@ def remove_background():
 
 
 def draw_image_grid():
-    nrows = 5
-    if 'images' not in st.session_state:
+    tmp_dir = f'temp/{session_uuid()}'
+    if not os.path.exists(tmp_dir):
         return None
-
-    for i in range(0, len(st.session_state.images), nrows):
+    
+    filenames = os.listdir(tmp_dir)
+    nrows = 5
+    for i in range(0, len(filenames), nrows):
         cols = st.columns(nrows)
         for j in range(nrows):
             n = i + j
             # print(f'i: {i}, j: {j}, n: {n}')
-            if len(st.session_state.images) > n:
-                thumb = st.session_state.images[n]
-                image = load_image(thumb.name)
-                cols[j].image(thumb.image, caption=thumb.name)
+            if len(filenames) > n:
+                name = filenames[n]
+                image = load_image(name)
+                cols[j].image(image, caption=name)
                 cols[j].write(f'{image.format}, {image.width}x{image.height}')  # type: ignore
 
 
 def garbage_cleanup():
     tmp_dir = f'temp/{session_uuid()}'
-    shutil.rmtree(tmp_dir)
-    if 'images' in st.session_state.keys():
-        del st.session_state['images']
+    if os.path.exists(tmp_dir):
+        shutil.rmtree(tmp_dir)
     gc.collect()
+    print('Cleanup done')
 
 
 # our app
@@ -155,39 +152,34 @@ elif authentication_status == True:
 
     with st.sidebar:
         if st.button('Очистка'):
-            if 'images' in st.session_state.keys():
-                for i in range(len(st.session_state.images)-1, 0, -1):
-                    del st.session_state.images[i]
-                del st.session_state['images']
-            print('Cleanup done')
-            gc.collect()
-            st.experimental_rerun()
+            garbage_cleanup()
 
         with st.form('action'):
             do_resise = st.checkbox('Применить максимальный размер')
             new_size = st.selectbox('Максимальный размер', _sizes, index=len(_sizes)-1)
-            do_square = st.radio('Оквадратить', ['Не изменять', 'Обрезать до квадрата', 'Расширить до квадрата'])
-            do_remove_bg = st.checkbox('Удалить фон')
+            change_ratio = st.radio('Изменить форму', ['Не изменять', 'Обрезать до квадрата', 'Расширить до квадрата', 'Расширить до 3:4'])
+            remove_bg = st.checkbox('Удалить фон')
             out_format = st.selectbox('Выходной формат', ['JPEG', 'JPEG2000', 'PNG'])
             submited = st.form_submit_button('Обработать изображения')
 
             if submited:
-                if 'images' in st.session_state:
-                    for thumb in st.session_state.images:
-                        _image = load_image(thumb.name)
-                        if do_resise:
-                            _image = helpers.resize_image(_image, new_size)  # type: ignore
-                        if do_square == 'Обрезать до квадрата':
-                            _image = helpers.square_crop(_image)
-                        elif do_square == 'Расширить до квадрата':
-                            _image = helpers.square_extend(_image)
-                        if do_remove_bg:
-                            _image = helpers.remove_bg(_image)
-                        save_image(_image, thumb.name)
-                        del _image
+                for fname in os.listdir(f'temp/{session_uuid()}'):
+                    _image = load_image(fname)
+                    if do_resise:
+                        _image = helpers.resize_image(_image, new_size)  # type: ignore
+                    if change_ratio == 'Обрезать до квадрата':
+                        _image = helpers.square_crop(_image)
+                    elif change_ratio == 'Расширить до квадрата':
+                        _image = helpers.square_extend(_image)
+                    elif change_ratio == 'Расширить до 3:4':
+                        _image = helpers.rectangle_extend(_image)
+                    if remove_bg:
+                        _image = helpers.remove_bg(_image)
+                    save_image(_image, fname)
+                    del _image
 
-                    _download_file = prepare_download_file(out_format)  # type: ignore
-                    st.success('Обработка завершена')
+                _download_file = prepare_download_file(out_format)  # type: ignore
+                st.success('Обработка завершена')
 
         if _download_file:
             st.download_button(

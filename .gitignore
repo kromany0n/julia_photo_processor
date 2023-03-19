@@ -1,0 +1,7 @@
+.*
+!.gitignore
+!.github
+temp
+config.yaml
+deploy.sh
+typings

@@ -12,9 +12,9 @@ def square_crop(img: Image.Image) -> Image.Image:
     elif img.height > img.width:
         leftover = img.height - img.width
         left = 0
-        upper = int(leftover)
+        upper = int(leftover/2)
         right = img.width
-        lower = leftover + img.width
+        lower = upper + img.width
     else:
         return img
     
@@ -23,7 +23,7 @@ def square_crop(img: Image.Image) -> Image.Image:
 
 def square_extend(img: Image.Image):
     max_dimention = max(img.size)
-    new_image = Image.new("RGBA", (max_dimention, max_dimention), 'white')
+    new_image = Image.new("RGB", (max_dimention, max_dimention), 'white')
     if img.width > img.height:
         diff = img.width - img.height
         left = 0
@@ -42,16 +42,33 @@ def square_extend(img: Image.Image):
     box = (left, upper, right, lower)
     new_image.paste(img, box)
     return new_image
-        
 
-# def compress(img: Image.Image, size: tuple[int, int]) -> Image.Image:
-#     return img
+
+def rectangle_extend(img: Image.Image) -> Image.Image:
+    ratio = 3/4
+    new_width = img.width
+    if ratio >= img.width/img.height:
+        return img
+    
+    new_height = int(new_width/ratio)
+    new_image = Image.new("RGB", (new_width, new_height), 'white')
+
+    diff = new_height - img.height
+    left = 0
+    upper = int(diff/2)
+    right = img.width
+    lower = upper + img.height
+
+    box = (left, upper, right, lower)
+    new_image.paste(img, box)
+    return new_image
+
 
 def remove_bg(img: Image.Image) -> Image.Image:
-    session = rembg.new_session("u2net")
+    session = rembg.new_session("u2net") # type: ignore
     result = Image.new("RGB", img.size, 'white')
     cleared = rembg.remove(img, session = session) # type: ignore
-    result.paste(cleared, mask=cleared)
+    result.paste(cleared, mask=cleared) # type: ignore
     return result
     
 
