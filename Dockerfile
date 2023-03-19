@@ -11,7 +11,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-# RUN mkdir /app
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 COPY mass_image_converter.py .
