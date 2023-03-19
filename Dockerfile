@@ -15,7 +15,6 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 COPY mass_image_converter.py .
 COPY helpers.py .
-COPY config.yaml .
 
 EXPOSE 8501
 
