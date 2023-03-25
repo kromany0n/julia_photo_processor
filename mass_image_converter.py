@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import uuid
 import os
 import gc
@@ -13,20 +12,14 @@ import helpers
 gc.enable()
 
 
-@dataclass()
-class SessionImage():
-    name: str
-    image: Image.Image
-
-
-def session_uuid():
+def session_uuid() -> str:
     if 'uuid' not in st.session_state:
         st.session_state.uuid = str(uuid.uuid4())
 
     return st.session_state.uuid
 
 
-def load_image(name: str):
+def load_image(name: str) -> Image.Image:
     return Image.open(f'temp/{session_uuid()}/{name}')
 
 
@@ -34,7 +27,8 @@ def save_image(image: Image.Image, name: str):
     return image.save(f'temp/{session_uuid()}/{name}')
 
 
-def process_uploaded_images(uploaded_files: list[UploadedFile]):
+def save_uploaded_images(uploaded_files: list[UploadedFile]):
+    '''Сохраняет картинки во временную папку'''
     tmp_dir = f'temp/{session_uuid()}'
 
     if os.path.exists(tmp_dir):
@@ -49,7 +43,7 @@ def process_uploaded_images(uploaded_files: list[UploadedFile]):
             f.write(uf.getbuffer())
 
 
-def prepare_download_file(img_out_format: str):
+def prepare_download_archive(img_out_format: str):
     tmp_dir = f'temp/{session_uuid()}'
 
     for thumb in st.session_state.images:
@@ -74,26 +68,11 @@ def prepare_download_file(img_out_format: str):
     return f'temp/{session_uuid()}.zip'
 
 
-def square_crop_images():
-    for i, img in enumerate(st.session_state.images):
-        st.session_state.images[i].image = helpers.square_crop(img.image)
-
-
-def square_extend_images():
-    for i, img in enumerate(st.session_state.images):
-        st.session_state.images[i].image = helpers.square_extend(img.image)
-
-
-def remove_background():
-    for i, img in enumerate(st.session_state.images):
-        st.session_state.images[i].image = helpers.remove_bg(img.image)
-
-
-def draw_image_grid():
+def draw_thumbs_grid():
     tmp_dir = f'temp/{session_uuid()}'
     if not os.path.exists(tmp_dir):
         return None
-    
+
     filenames = os.listdir(tmp_dir)
     nrows = 5
     for i in range(0, len(filenames), nrows):
@@ -108,12 +87,12 @@ def draw_image_grid():
                 cols[j].write(f'{image.format}, {image.width}x{image.height}')  # type: ignore
 
 
-def garbage_cleanup():
+def session_images_cleanup():
+    '''Очистка каталога с картинками'''
+
     tmp_dir = f'temp/{session_uuid()}'
     if os.path.exists(tmp_dir):
         shutil.rmtree(tmp_dir)
-    gc.collect()
-    print('Cleanup done')
 
 
 # our app
@@ -148,11 +127,12 @@ elif authentication_status == True:
         submitted = st.form_submit_button("Загрузить")
 
         if submitted and uploaded_files is not None and not _download_file:
-            process_uploaded_images(uploaded_files)
+            save_uploaded_images(uploaded_files)
 
     with st.sidebar:
         if st.button('Очистка'):
-            garbage_cleanup()
+            gc.collect()
+            session_images_cleanup()
 
         with st.form('action'):
             do_resise = st.checkbox('Применить максимальный размер')
@@ -168,17 +148,17 @@ elif authentication_status == True:
                     if do_resise:
                         _image = helpers.resize_image(_image, new_size)  # type: ignore
                     if change_ratio == 'Обрезать до квадрата':
-                        _image = helpers.square_crop(_image)
+                        _image = helpers.crop_image_to_square(_image)
                     elif change_ratio == 'Расширить до квадрата':
-                        _image = helpers.square_extend(_image)
+                        _image = helpers.extend_image_to_square(_image)
                     elif change_ratio == 'Расширить до 3:4':
-                        _image = helpers.rectangle_extend(_image)
+                        _image = helpers.extend_image_to_rectangle(_image)
                     if remove_bg:
-                        _image = helpers.remove_bg(_image)
+                        _image = helpers.remove_image_background(_image)
                     save_image(_image, fname)
                     del _image
 
-                _download_file = prepare_download_file(out_format)  # type: ignore
+                _download_file = prepare_download_archive(out_format)  # type: ignore
                 st.success('Обработка завершена')
 
         if _download_file:
@@ -189,6 +169,6 @@ elif authentication_status == True:
                 mime='application/zip'
             )
 
-    draw_image_grid()
+    draw_thumbs_grid()
 
 gc.collect()

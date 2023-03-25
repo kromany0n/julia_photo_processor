@@ -2,17 +2,17 @@
 from PIL import Image
 import rembg
 
-def square_crop(img: Image.Image) -> Image.Image:
+def crop_image_to_square(img: Image.Image) -> Image.Image:
     if img.width > img.height:
         leftover = img.width - img.height
-        left = int(leftover/2)
+        left = leftover//2
         upper = 0
         right = left + img.height
         lower = img.height
     elif img.height > img.width:
         leftover = img.height - img.width
         left = 0
-        upper = int(leftover/2)
+        upper = leftover//2
         right = img.width
         lower = upper + img.width
     else:
@@ -21,18 +21,18 @@ def square_crop(img: Image.Image) -> Image.Image:
     box = (left, upper, right, lower)
     return img.crop(box)
 
-def square_extend(img: Image.Image):
+def extend_image_to_square(img: Image.Image):
     max_dimention = max(img.size)
     new_image = Image.new("RGB", (max_dimention, max_dimention), 'white')
     if img.width > img.height:
         diff = img.width - img.height
         left = 0
-        upper = int(diff/2)
+        upper = diff//2
         right = img.width
         lower = upper + img.height
     elif img.height > img.width:
         diff = img.height - img.width
-        left = int(diff/2)
+        left = diff//2
         upper = 0
         right = left + img.width
         lower = img.height
@@ -44,7 +44,7 @@ def square_extend(img: Image.Image):
     return new_image
 
 
-def rectangle_extend(img: Image.Image) -> Image.Image:
+def extend_image_to_rectangle(img: Image.Image) -> Image.Image:
     ratio = 3/4
     new_width = img.width
     if ratio >= img.width/img.height:
@@ -55,7 +55,7 @@ def rectangle_extend(img: Image.Image) -> Image.Image:
 
     diff = new_height - img.height
     left = 0
-    upper = int(diff/2)
+    upper = diff//2
     right = img.width
     lower = upper + img.height
 
@@ -64,7 +64,7 @@ def rectangle_extend(img: Image.Image) -> Image.Image:
     return new_image
 
 
-def remove_bg(img: Image.Image) -> Image.Image:
+def remove_image_background(img: Image.Image) -> Image.Image:
     session = rembg.new_session("u2net") # type: ignore
     result = Image.new("RGB", img.size, 'white')
     cleared = rembg.remove(img, session = session) # type: ignore
